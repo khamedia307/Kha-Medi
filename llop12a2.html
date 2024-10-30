@@ -1,0 +1,288 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phòng Chat 12A2 - THPT Mỹ Lạc</title>
+    <style>
+        /* Cài đặt chung */
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+        }
+        #chatContainer {
+            width: 90%;
+            max-width: 900px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+        /* Header và logo */
+        #header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px;
+            background-color: #0077ff;
+            border-radius: 8px 8px 0 0;
+            color: #ffffff;
+            width: 100%;
+        }
+        #header img {
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        #header h1 {
+            font-size: 24px;
+            margin: 0;
+            flex: 1;
+        }
+        /* Khu vực chat */
+        #chatArea {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        #chatBox {
+            height: 450px;
+            overflow-y: auto;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-top: 15px;
+            background-color: #fafafa;
+            white-space: pre-wrap;
+            text-align: left;
+        }
+        /* Tin nhắn và tin nhắn đã ghim */
+        #pinnedMessage {
+            background-color: #ffe082;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            display: none;
+            text-align: left;
+        }
+        #messages {
+            list-style-type: none;
+            padding: 0;
+        }
+        #messages li {
+            background-color: #e1f5fe;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        /* Nút bấm */
+        .button {
+            background-color: #0077ff;
+            color: #fff;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .button:hover {
+            background-color: #005bb5;
+        }
+        /* Danh sách thành viên */
+        #memberList {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #e3f2fd;
+            padding: 10px;
+            margin-top: 15px;
+        }
+        /* Phần thông tin liên hệ */
+        #footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+
+<div id="chatContainer">
+    <div id="header">
+        <h1>Phòng Chat 12A2 - THPT Mỹ Lạc</h1>
+        <input type="file" id="logoInput" style="display: none;" accept="image/*" onchange="changeLogo()">
+        <img src="https://via.placeholder.com/50" id="logo" alt="Logo lớp" onclick="document.getElementById('logoInput').click();">
+    </div>
+
+    <div id="pinnedMessage"></div>
+
+    <div id="chatArea">
+        <div>
+            <input type="text" id="username" placeholder="Tên của bạn" required>
+            <button class="button" onclick="registerUser()">Đăng ký</button>
+        </div>
+
+        <div id="chatBox">
+            <ul id="messages"></ul>
+        </div>
+
+        <input type="text" id="messageInput" placeholder="Nhập tin nhắn..." disabled oninput="autoResize(this)">
+        <button class="button" onclick="sendMessage()" disabled>Gửi</button>
+
+        <input type="file" id="fileInput" accept="image/*" disabled>
+        <button class="button" onclick="sendImage()" disabled>Chia sẻ ảnh</button>
+    </div>
+
+    <div id="memberList">
+        <h3>Thành viên nhóm</h3>
+        <ul id="members"></ul>
+        <p id="memberCount">Số lượng thành viên: 0</p>
+    </div>
+</div>
+
+<div id="footer">
+    <p>Website của Nguyễn Mẫn Kha | SĐT: 0337304653 | Email: kct.vnd@gmail.com</p>
+    <p>Cảm ơn mọi người đã tin tưởng sử dụng trang web. Mọi thắc mắc, góp ý xin vui lòng liên hệ admin để web hoàn thiện hơn trong thời gian tới.</p>
+</div>
+
+<script>
+    let username = '';
+    let pinnedMessageId = null;
+    const registeredUsers = new Set(); // Tạo một tập để lưu trữ tên đã đăng ký
+
+    function registerUser() {
+        const input = document.getElementById('username');
+        const newUser = input.value.trim();
+
+        if (newUser === '') {
+            alert('Vui lòng nhập tên của bạn');
+            return;
+        }
+        if (registeredUsers.has(newUser)) {
+            alert('Tên này đã được đăng ký. Vui lòng chọn tên khác.');
+            return;
+        }
+
+        // Nếu tên hợp lệ và chưa được đăng ký
+        username = newUser;
+        registeredUsers.add(username); // Thêm tên vào tập đã đăng ký
+        input.disabled = true;
+
+        // Cập nhật danh sách thành viên
+        updateMemberList();
+
+        document.getElementById('messageInput').disabled = false;
+        document.getElementById('fileInput').disabled = false;
+        document.querySelector('button[onclick="sendMessage()"]').disabled = false;
+        document.querySelector('button[onclick="sendImage()"]').disabled = false;
+    }
+
+    function updateMemberList() {
+        const members = document.getElementById('members');
+        members.innerHTML = ''; // Xóa danh sách thành viên hiện tại
+
+        registeredUsers.forEach(user => {
+            const li = document.createElement('li');
+            li.textContent = user;
+            members.appendChild(li);
+        });
+
+        // Cập nhật số lượng thành viên
+        document.getElementById('memberCount').textContent = `Số lượng thành viên: ${registeredUsers.size}`;
+    }
+
+    function sendMessage() {
+        const messageInput = document.getElementById('messageInput');
+        if (messageInput.value.trim() === '') {
+            return;
+        }
+        const message = `<strong>${username}:</strong> ${messageInput.value}`;
+        addMessageToChat(message);
+        messageInput.value = '';
+        messageInput.style.height = 'auto'; // Đặt lại chiều cao về mặc định
+    }
+
+    function sendImage() {
+        const fileInput = document.getElementById('fileInput');
+        const file = fileInput.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = `<img src="${e.target.result}" alt="shared image" width="100">`;
+                addMessageToChat(`<strong>${username}:</strong> đã chia sẻ một ảnh:<br>${img}`);
+            };
+            reader.readAsDataURL(file);
+        } else {
+            alert('Vui lòng chọn ảnh để chia sẻ');
+        }
+        fileInput.value = '';
+    }
+
+    function addMessageToChat(message) {
+        const messages = document.getElementById('messages');
+        const messageElement = document.createElement('li');
+        messageElement.innerHTML = message;
+
+        // Gán ID cho mỗi tin nhắn để dễ quản lý
+        messageElement.id = `message-${messages.childElementCount}`;
+
+        // Thêm sự kiện bấm giữ để ghim
+        messageElement.addEventListener('mousedown', (e) => {
+            if (e.button === 0) { // Chỉ xử lý khi bấm chuột trái
+                pinMessage(messageElement.id);
+            }
+        });
+
+        messages.appendChild(messageElement);
+        messages.scrollTop = messages.scrollHeight; // Cuộn đến cuối
+    }
+
+    function pinMessage(messageId) {
+        const messageElement = document.getElementById(messageId);
+        if (pinnedMessageId === messageId) {
+            // Nếu tin nhắn đã ghim thì bỏ ghim
+            const pinnedMessage = document.getElementById('pinnedMessage');
+            pinnedMessage.style.display = 'none'; // Ẩn tin nhắn đã ghim
+            pinnedMessageId = null;
+            messageElement.style.backgroundColor = '#e1f5fe'; // Đặt lại màu cho tin nhắn
+        } else {
+            // Nếu chưa ghim, ghim tin nhắn
+            const pinnedMessage = document.getElementById('pinnedMessage');
+            pinnedMessage.innerHTML = messageElement.innerHTML; // Cập nhật nội dung tin nhắn đã ghim
+            pinnedMessage.style.display = 'block'; // Hiện tin nhắn đã ghim
+            pinnedMessageId = messageId;
+            messageElement.style.backgroundColor = '#ffe082'; // Đổi màu tin nhắn đã ghim
+        }
+    }
+
+    function changeLogo() {
+        const logoInput = document.getElementById('logoInput');
+        const logo = document.getElementById('logo');
+        const file = logoInput.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                logo.src = e.target.result; // Thay đổi logo
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function autoResize(textarea) {
+        textarea.style.height = 'auto'; // Đặt lại chiều cao về mặc định
+        textarea.style.height = textarea.scrollHeight + 'px'; // Điều chỉnh chiều cao theo nội dung
+    }
+</script>
+
+</body>
+</html>
